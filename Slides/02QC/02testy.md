@@ -5,8 +5,52 @@
 <meta name="duration" content="80" />
 
 # Testowanie programów w Haskellu
+* doctest [github: sol/doctest](https://github.com/sol/doctest)
 * HUnit
 * Quickcheck
+* QuickCheck + doctest
+* Hedgehog [github: hedgehogqa/haskell-hedgehog](https://github.com/hedgehogqa/haskell-hedgehog)
+
+# doctest
+
+Przykłady w dokumetacji mogą służyć za testy regresji
+
+``` {.haskell }
+module DoctestExamples where
+-- | Expect success
+-- >>> 2 + 2
+-- 4
+
+-- | Expect failure
+-- >>> 2 + 2
+-- 5
+
+```
+
+```
+doctest DoctestExamples.hs      
+### Failure in DoctestExamples.hs:7: expression `2 + 2'
+expected: 5
+ but got: 4
+Examples: 2  Tried: 2  Errors: 0  Failures: 1
+```
+
+# Przykład z BNFC
+``` {.haskell}
+-- | Generate a name in the given case style taking into account the reserved
+-- word of the language.
+-- >>> mkName [] SnakeCase "FooBAR"
+-- "foo_bar"
+-- >>> mkName [] CamelCase "FooBAR"
+-- "FooBAR"
+-- >>> mkName [] CamelCase "Foo_bar"
+-- "FooBar"
+-- >>> mkName ["foobar"] LowerCase "FooBAR"
+-- "foobar_"
+mkName :: [String] -> NameStyle -> String -> String
+mkName reserved style s = ...
+```
+
 
 # HUnit
 
