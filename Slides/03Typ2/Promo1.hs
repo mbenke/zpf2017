@@ -3,6 +3,7 @@
 {-# LANGUAGE TypeFamilies, TypeOperators #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE ExplicitForAll #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 module Promo1 where
 
 data Nat :: * where
@@ -136,8 +137,11 @@ vchop3 (SS m) (x:>xs) = (x:>ys, zs) where
 -- Exercise: define multiplication
 
 -- | Take first `n` elements of a vector
-vtake1 :: SNat m -> NP n -> Vec (m :+ n) a -> Vec m a
-vtake1 = undefined
+vtake1 :: SNat m -> Vec (m :+ n) a -> Vec m a
+vtake1  SZ    xs = V0
+vtake1 (SS m) (x:>xs) = x :> vtake1 m xs
+-- vtake1  _ _ = undefined
+
 
 -- | Nat Proxy
 data NP :: Nat -> * where NP :: NP n

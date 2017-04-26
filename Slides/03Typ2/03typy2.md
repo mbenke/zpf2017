@@ -407,6 +407,40 @@ vcycle :: SNat n -> Vec m a -> Vec (n:*m) a
 # vtake
 
 Chcemy zdefiniować analog funkcji `take`
+``` {.haskell}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+
+vtake1 :: SNat m -> Vec (m :+ n) -> Vec m x
+vtake1  SZ     xs     = V0
+vtake1 (SS m) (x:>xs) = x :> vtake1 m xs
 ```
-vtake1 :: SNat n -> Vec (m :+ n) -> Vec m x
+
+``` {.error}
+error: …
+    • Could not deduce: (n1 :+ n0) ~ n2
+      from the context: m ~ 'S n1
+        bound by a pattern with constructor:
+                   SS :: forall (n :: Nat). SNat n -> SNat ('S n),
+                 in an equation for ‘vtake1’
+```
+
+Kompilator nie potrafi otypować przypadku rekurencyjnego.
+Problem w tym  czy `(m :+)` jest różnowartościowe. NB żeby w ogóle spróbował musieliśmy użyć `AllowAmbiguousTypes`
+
+# Różnowartościowość (injectivity)
+
+`Maybe a ~ Maybe b => a ~ b`
+
+ale trudniej ustalić, czy
+
+`m :+ n0 ~ m :+ n1 => n0 ~ n1`
+
+Konkretnie w typie
+
+`vtake1 :: SNat m -> Vec (m :+ n) -> Vec m x`
+
+brakuje nam "uchwytu" do `n`;  w "prawdziwych" typach zależnych napisalibyśmy
+
+```
+(m : Nat) -> (n : Nat) -> Vec (m + n) x -> Vec m x
 ```
