@@ -519,7 +519,23 @@ OrderedInts [-13,-10,-7,-5,-2,3,10,10,13]
 OrderedInts [-19,-4,26]
 OrderedInts [-63,-15,37]
 OrderedInts [-122,-53,-47,-43,-21,-19,29,53]</code></pre>
-<h1 id="koniec">Koniec</h1>
-<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"></code></pre></div>
+<h1 id="doctest-quickcheck">doctest + QuickCheck</h1>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">module</span> <span class="dt">Fib</span> <span class="kw">where</span>
+
+<span class="co">-- $setup</span>
+<span class="co">-- &gt;&gt;&gt; import Control.Applicative</span>
+<span class="co">-- &gt;&gt;&gt; import Test.QuickCheck</span>
+<span class="co">-- &gt;&gt;&gt; newtype Small = Small Int deriving Show</span>
+<span class="co">-- &gt;&gt;&gt; instance Arbitrary Small where arbitrary = Small . (`mod` 10) &lt;$&gt; arbitrary</span>
+
+<span class="co">-- | Compute Fibonacci numbers</span>
+<span class="co">--</span>
+<span class="co">-- The following property holds:</span>
+<span class="co">--</span>
+<span class="co">-- prop&gt; \(Small n) -&gt; fib n == fib (n + 2) - fib (n + 1)</span>
+<span class="ot">fib ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span>
+fib <span class="dv">0</span> <span class="fu">=</span> <span class="dv">0</span>
+fib <span class="dv">1</span> <span class="fu">=</span> <span class="dv">1</span>
+fib n <span class="fu">=</span> fib (n <span class="fu">-</span> <span class="dv">1</span>) <span class="fu">+</span> fib (n <span class="fu">-</span> <span class="dv">2</span>)</code></pre></div>
 </body>
 </html>
