@@ -54,13 +54,13 @@ deriving instance (Show a) => Show (Vec n a)
 infixl 6 :+
 
 type family (n :: Nat) :+ (m :: Nat) :: Nat
-type instance Z :+ m = m
-type instance (S n) :+ m = S (n :+ m)
+type instance 'Z :+ m = m
+type instance ('S n) :+ m = 'S (n :+ m)
 
-vhead :: Vec (S n) a -> a
+vhead :: Vec ('S n) a -> a
 vhead (x:>_) = x
 
-vtail :: Vec (S n) a -> Vec n a
+vtail :: Vec ('S n) a -> Vec n a
 vtail (_:> xs) = xs
 
 vapp :: Vec m a -> Vec n a -> Vec (m :+ n) a
@@ -75,12 +75,12 @@ vapp (x:>xs) ys = x:>(vapp xs ys)
 -- atIndex :: Vec n a -> (m < n) -> a
 
 data Fin n where
-    FinZ :: Fin (S n) -- zero is less than any successor
-    FinS :: Fin n -> Fin (S n) -- n is less than (n+1)
+    FinZ :: Fin ('S n) -- zero is less than any successor
+    FinS :: Fin n -> Fin ('S n) -- n is less than (n+1)
 
 atIndex :: Vec n a -> Fin n -> a
-atIndex (x:>xs) FinZ = x
-atIndex (x:>xs) (FinS k) = atIndex xs k
+atIndex (x:>_) FinZ = x
+atIndex (_:>xs) (FinS k) = atIndex xs k
 
 -- Question - why not:
 -- atIndex :: Vec (S n) a -> ... ?
@@ -107,8 +107,8 @@ vchop2 (_:>m) (x:>xs) = (x:>ys, zs) where
 
 -- inhabitants of Nat types
 data SNat n where
-  SZ :: SNat Z
-  SS :: SNat n -> SNat (S n)
+  SZ :: SNat 'Z
+  SS :: SNat n -> SNat ('S n)
 deriving instance Show(SNat n)
 
 
@@ -128,6 +128,7 @@ vreplicate (SS n) x = x:>(vreplicate n x)
 -- | chop a vector in two parts
 -- >>> vchop (SS SZ) (1 :> 2 :> V0)
 -- (1 :> V0,2 :> V0)
+vchop :: SNat m -> Vec(m:+n) a -> (Vec m a, Vec n a)
 vchop = vchop3
 vchop3 :: SNat m -> Vec(m:+n) a -> (Vec m a, Vec n a)
 vchop3 SZ xs = (V0, xs)
@@ -136,21 +137,34 @@ vchop3 (SS m) (x:>xs) = (x:>ys, zs) where
 
 -- Exercise: define multiplication
 
+-- # Comparison
+
+type family (m::Nat) :< (n::Nat) :: Bool
+type instance m :< 'Z = 'False
+type instance 'Z :< ('S n) = 'True
+type instance ('S m) :< ('S n) = m :< n
+
+-- nth
+nth :: (m:<n) ~ 'True => SNat m -> Vec n a -> a
+nth SZ (a:>_)  = a
+nth (SS m') (_:>xs) = nth m' xs
+
 -- | Take first `n` elements of a vector
 vtake1 :: SNat m -> Vec (m :+ n) a -> Vec m a
-vtake1  SZ    xs = V0
-vtake1 (SS m) (x:>xs) = x :> vtake1 m xs
--- vtake1  _ _ = undefined
+vtake1  SZ    _ = V0
+-- vtake1 (SS m) (x:>xs) = x :> vtake1 m xs
+vtake1  _ _ = undefined
 
 
 -- | Nat Proxy
 data NP :: Nat -> * where NP :: NP n
 
 vtake2 :: SNat m -> NP n -> Vec (m :+ n) a -> Vec m a
-vtake2 SZ     n xs = V0
--- vtake2 (SS m) n
+vtake2 SZ     _ _ = V0
+vtake2 (SS m) n (x:>xs) = x :> vtake2 m n xs
 
 -- | Generic Proxy
 data Proxy :: k -> * where
   Proxy :: Proxy i
+
 

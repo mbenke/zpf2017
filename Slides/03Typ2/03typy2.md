@@ -371,6 +371,23 @@ add (SS m) n = SS (add m n)
 ``` {.haskell}
 mul :: (SNat m) -> (SNat n) -> SNat(m :* n)
 ```
+# Porównania i inny sposób indeksowania wektora
+
+```
+-- # Comparison
+
+type family (m::Nat) :< (n::Nat) :: Bool
+type instance m :< 'Z = 'False
+type instance 'Z :< ('S n) = 'True
+type instance ('S m) :< ('S n) = m :< n
+
+-- nth
+nth :: (m:<n) ~ 'True => SNat m -> Vec n a -> a
+nth SZ (a:>_)  = a
+nth (SS m') (_:>xs) = nth m' xs
+```
+
+# Bilioteka singletons
 
 # vchop3
 
