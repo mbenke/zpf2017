@@ -1,7 +1,7 @@
 -- Based on http://www.haskell.org/haskellwiki/Quasiquotation
 module ExprQuote1 where
 
-import Data.Generics
+-- import Data.Generics
 import qualified Language.Haskell.TH as TH
 import Language.Haskell.TH.Quote
 
