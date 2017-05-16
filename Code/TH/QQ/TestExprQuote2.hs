@@ -19,3 +19,7 @@ twice :: Exp -> Exp
 twice e = [expr| $e + $e |]
 
 testTwice = twice [expr| 3 * 3|]
+
+main = do
+     print test
+     print testTwice 
