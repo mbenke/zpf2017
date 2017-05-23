@@ -46,17 +46,11 @@
 ```
    type family Arity (n::Nat) (a::*) :: *
    vap :: Arity n a -> Vec n a -> a
-```
-   
-9. Zależności implicite
-```
-   class NATTY (n::Nat)
-   vtrunc :: NATTY m => Proxy n -> Vec (m :+ n) a -> Vec m a
-```
+``` 
 
-10. TypeApplication
+9. TypeApplication
 
-11. Biblioteka `singletons`
+10. Biblioteka `singletons`
 
 # Rodzaje (kinds)
 
@@ -387,8 +381,6 @@ nth SZ (a:>_)  = a
 nth (SS m') (_:>xs) = nth m' xs
 ```
 
-# Bilioteka singletons
-
 # vchop3
 
 ``` {.haskell}
@@ -460,4 +452,127 @@ brakuje nam "uchwytu" do `n`;  w "prawdziwych" typach zależnych napisalibyśmy
 
 ```
 (m : Nat) -> (n : Nat) -> Vec (m + n) x -> Vec m x
+```
+
+# Proxy
+
+```
+data NP :: Nat -> * where NP :: NP n
+
+vtake2 :: SNat m -> NP n -> Vec (m :+ n) a -> Vec m a
+vtake2 SZ     _ _ = V0
+vtake2 (SS m) n (x:>xs) = x :> vtake2 m n xs
+```
+#  Kind polymorphism
+Możemy zdefiniować jedno `Proxy` dla wszystkich rodzajów
+
+```
+   data Proxy :: k -> * where Proxy :: Proxy i
+   vtake2 :: Natty m -> Proxy n -> Vec (m :+ n) -> Vec m a 
+```
+
+Wymaga to jednak roszerzenia `KindPolymorphism`
+
+# Ćwiczenie: aplikacja wektorowa
+
+
+Chcemy zastosować n-argumentowy operator do wektora n argumentów
+
+```
+   type family Arity (n::Nat) (a::*) :: *
+   vap :: Arity n a -> Vec n a -> a
+-- >>> vap (+) (1 :> 2 :> V0)
+-- 3
+```
+
+# TypeApplication
+
+```
+-- Requires GHC >= 8.0
+{-# LANGUAGE TypeApplications, ExplicitForAll, GADTs #-}
+{-# LANGUAGE PolyKinds, ScopedTypeVariables, AllowAmbiguousTypes #-}
+import Data.Proxy
+-- data Proxy :: k -> * where Proxy :: Proxy i
+
+answer_read = show (read @Int "3") -- "3" :: String
+answer_show = show @Integer (read "5") -- "5" :: String
+answer_showread = show @Int (read @Int "7") -- "7" :: String
+
+incShow :: forall a . (Read a, Show a, Num a) => String -> String
+incShow = show . (+1) . read @a
+-- >>> incShow @Int "3"
+-- "4"
+-- >>> incShow @Double "3.0"
+-- "4.0"
+
+incShow7 :: forall a . (Read a, Show a, Num a) => Proxy a -> String -> String
+incShow7 _ = show . (+1) . (read :: String -> a)
+-- >>> incShow7 (Proxy::Proxy Double) "3.0"
+```
+
+** Ćwiczenie: ** przepisać funkcję `vtake` z użyciem aplikacji typowej zamiast `Proxy`
+
+# Bilioteka singletons
+
+```
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE PolyKinds, DataKinds, TypeFamilies, KindSignatures, GADTs,
+             FlexibleInstances, FlexibleContexts, UndecidableInstances,
+             RankNTypes, TypeOperators, MultiParamTypeClasses,
+             FunctionalDependencies, ScopedTypeVariables,
+             LambdaCase, TemplateHaskell, EmptyCase, TypeInType
+ #-}
+
+import Data.Singletons
+import Data.Singletons.TH
+import Data.Proxy
+import Data.Kind
+
+$(singletons [d|
+  data Nat where
+    Z :: Nat
+    S :: Nat -> Nat
+      deriving (Eq, Show, Read)
+
+  plus :: Nat -> Nat -> Nat
+  plus Z m = m
+  plus (S n) m = S (plus n m)
+
+  pred :: Nat -> Nat
+  pred Z = Z
+  pred (S n) = n
+ |])
+
+deriving instance Show (SNat n)
+-- deriving instance Eq (SNat n)
+
+infixr 6 :>
+data Vec :: Nat -> * -> * where
+  V0   :: Vec 'Z a
+  (:>) :: a -> Vec n a -> Vec ('S n) a
+
+deriving instance (Show a) => Show (Vec n a)
+
+vhead :: Vec ('S n) a -> a
+vhead (x:>_) = x
+
+vtail :: Vec ('S n) a -> Vec n a
+vtail (_:> xs) = xs
+
+vapp :: Vec m a -> Vec n a -> Vec (Plus m n) a
+vapp V0 ys = ys
+vapp (x:>xs) ys = x:>(vapp xs ys)
+
+vreplicate :: SNat n -> a -> Vec n a
+vreplicate SZ _ = V0
+vreplicate (SS n) x = x:>(vreplicate n x)
+
+-- | chop a vector in two parts
+-- >>> vchop (SS SZ) (1 :> 2 :> V0)
+-- (1 :> V0,2 :> V0)
+vchop :: SNat m -> Vec(Plus m n) a -> (Vec m a, Vec n a)
+vchop SZ xs = (V0, xs)
+vchop (SS m) (x:>xs) = (x:>ys, zs) where
+  (ys,zs) = vchop m xs
+
 ```

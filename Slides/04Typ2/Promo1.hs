@@ -167,4 +167,15 @@ vtake2 (SS m) n (x:>xs) = x :> vtake2 m n xs
 data Proxy :: k -> * where
   Proxy :: Proxy i
 
+-- | Arity
+type family Arity (n :: Nat)(x :: *) :: *
 
+type instance Arity  Z     x = x
+type instance Arity (S n)  x = x -> Arity n x
+
+-- | vector appplication
+-- >>> vap (+) (1 :> 2 :> V0)
+-- 3
+vap :: Arity n a -> Vec n a -> a
+vap x V0 = x
+vap f (x :> xs) = vap (f x) xs

@@ -89,9 +89,6 @@ Marcin Benke
 <li><p>Aplikacja wektorowa</p>
 <pre><code>   type family Arity (n::Nat) (a::*) :: *
    vap :: Arity n a -&gt; Vec n a -&gt; a</code></pre></li>
-<li><p>Zależności implicite</p>
-<pre><code>   class NATTY (n::Nat)
-   vtrunc :: NATTY m =&gt; Proxy n -&gt; Vec (m :+ n) a -&gt; Vec m a</code></pre></li>
 <li><p>TypeApplication</p></li>
 <li><p>Biblioteka <code>singletons</code></p></li>
 </ol>
@@ -328,6 +325,20 @@ add (<span class="dt">SS</span> m) n <span class="fu">=</span> <span class="dt">
 <p><strong>Ćwiczenie:</strong> zdefiniować mnożenie</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">mul ::</span> (<span class="dt">SNat</span> m) <span class="ot">-&gt;</span> (<span class="dt">SNat</span> n) <span class="ot">-&gt;</span> <span class="dt">SNat</span>(m <span class="fu">:*</span> n)</code></pre></div>
 </div>
+<div id="porównania-i-inny-sposób-indeksowania-wektora" class="slide section level1">
+<h1>Porównania i inny sposób indeksowania wektora</h1>
+<pre><code>-- # Comparison
+
+type family (m::Nat) :&lt; (n::Nat) :: Bool
+type instance m :&lt; &#39;Z = &#39;False
+type instance &#39;Z :&lt; (&#39;S n) = &#39;True
+type instance (&#39;S m) :&lt; (&#39;S n) = m :&lt; n
+
+-- nth
+nth :: (m:&lt;n) ~ &#39;True =&gt; SNat m -&gt; Vec n a -&gt; a
+nth SZ (a:&gt;_)  = a
+nth (SS m&#39;) (_:&gt;xs) = nth m&#39; xs</code></pre>
+</div>
 <div id="vchop3" class="slide section level1">
 <h1>vchop3</h1>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | chop a vector in two parts</span>
@@ -377,6 +388,116 @@ vtake1 (<span class="dt">SS</span> m) (x<span class="fu">:&gt;</span>xs) <span c
 <p><code>vtake1 :: SNat m -&gt; Vec (m :+ n) -&gt; Vec m x</code></p>
 <p>brakuje nam &quot;uchwytu&quot; do <code>n</code>; w &quot;prawdziwych&quot; typach zależnych napisalibyśmy</p>
 <pre><code>(m : Nat) -&gt; (n : Nat) -&gt; Vec (m + n) x -&gt; Vec m x</code></pre>
+</div>
+<div id="proxy" class="slide section level1">
+<h1>Proxy</h1>
+<pre><code>data NP :: Nat -&gt; * where NP :: NP n
+
+vtake2 :: SNat m -&gt; NP n -&gt; Vec (m :+ n) a -&gt; Vec m a
+vtake2 SZ     _ _ = V0
+vtake2 (SS m) n (x:&gt;xs) = x :&gt; vtake2 m n xs</code></pre>
+</div>
+<div id="kind-polymorphism" class="slide section level1">
+<h1>Kind polymorphism</h1>
+<p>Możemy zdefiniować jedno <code>Proxy</code> dla wszystkich rodzajów</p>
+<pre><code>   data Proxy :: k -&gt; * where Proxy :: Proxy i
+   vtake2 :: Natty m -&gt; Proxy n -&gt; Vec (m :+ n) -&gt; Vec m a </code></pre>
+<p>Wymaga to jednak roszerzenia <code>KindPolymorphism</code></p>
+</div>
+<div id="ćwiczenie-aplikacja-wektorowa" class="slide section level1">
+<h1>Ćwiczenie: aplikacja wektorowa</h1>
+<p>Chcemy zastosować n-argumentowy operator do wektora n argumentów</p>
+<pre><code>   type family Arity (n::Nat) (a::*) :: *
+   vap :: Arity n a -&gt; Vec n a -&gt; a
+-- &gt;&gt;&gt; vap (+) (1 :&gt; 2 :&gt; V0)
+-- 3</code></pre>
+</div>
+<div id="typeapplication" class="slide section level1">
+<h1>TypeApplication</h1>
+<pre><code>-- Requires GHC &gt;= 8.0
+{-# LANGUAGE TypeApplications, ExplicitForAll, GADTs #-}
+{-# LANGUAGE PolyKinds, ScopedTypeVariables, AllowAmbiguousTypes #-}
+import Data.Proxy
+-- data Proxy :: k -&gt; * where Proxy :: Proxy i
+
+answer_read = show (read @Int &quot;3&quot;) -- &quot;3&quot; :: String
+answer_show = show @Integer (read &quot;5&quot;) -- &quot;5&quot; :: String
+answer_showread = show @Int (read @Int &quot;7&quot;) -- &quot;7&quot; :: String
+
+incShow :: forall a . (Read a, Show a, Num a) =&gt; String -&gt; String
+incShow = show . (+1) . read @a
+-- &gt;&gt;&gt; incShow @Int &quot;3&quot;
+-- &quot;4&quot;
+-- &gt;&gt;&gt; incShow @Double &quot;3.0&quot;
+-- &quot;4.0&quot;
+
+incShow7 :: forall a . (Read a, Show a, Num a) =&gt; Proxy a -&gt; String -&gt; String
+incShow7 _ = show . (+1) . (read :: String -&gt; a)
+-- &gt;&gt;&gt; incShow7 (Proxy::Proxy Double) &quot;3.0&quot;</code></pre>
+<p>** Ćwiczenie: ** przepisać funkcję <code>vtake</code> z użyciem aplikacji typowej zamiast <code>Proxy</code></p>
+</div>
+<div id="bilioteka-singletons" class="slide section level1">
+<h1>Bilioteka singletons</h1>
+<pre><code>{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE PolyKinds, DataKinds, TypeFamilies, KindSignatures, GADTs,
+             FlexibleInstances, FlexibleContexts, UndecidableInstances,
+             RankNTypes, TypeOperators, MultiParamTypeClasses,
+             FunctionalDependencies, ScopedTypeVariables,
+             LambdaCase, TemplateHaskell, EmptyCase, TypeInType
+ #-}
+
+import Data.Singletons
+import Data.Singletons.TH
+import Data.Proxy
+import Data.Kind
+
+$(singletons [d|
+  data Nat where
+    Z :: Nat
+    S :: Nat -&gt; Nat
+      deriving (Eq, Show, Read)
+
+  plus :: Nat -&gt; Nat -&gt; Nat
+  plus Z m = m
+  plus (S n) m = S (plus n m)
+
+  pred :: Nat -&gt; Nat
+  pred Z = Z
+  pred (S n) = n
+ |])
+
+deriving instance Show (SNat n)
+-- deriving instance Eq (SNat n)
+
+infixr 6 :&gt;
+data Vec :: Nat -&gt; * -&gt; * where
+  V0   :: Vec &#39;Z a
+  (:&gt;) :: a -&gt; Vec n a -&gt; Vec (&#39;S n) a
+
+deriving instance (Show a) =&gt; Show (Vec n a)
+
+vhead :: Vec (&#39;S n) a -&gt; a
+vhead (x:&gt;_) = x
+
+vtail :: Vec (&#39;S n) a -&gt; Vec n a
+vtail (_:&gt; xs) = xs
+
+vapp :: Vec m a -&gt; Vec n a -&gt; Vec (Plus m n) a
+vapp V0 ys = ys
+vapp (x:&gt;xs) ys = x:&gt;(vapp xs ys)
+
+vreplicate :: SNat n -&gt; a -&gt; Vec n a
+vreplicate SZ _ = V0
+vreplicate (SS n) x = x:&gt;(vreplicate n x)
+
+-- | chop a vector in two parts
+-- &gt;&gt;&gt; vchop (SS SZ) (1 :&gt; 2 :&gt; V0)
+-- (1 :&gt; V0,2 :&gt; V0)
+vchop :: SNat m -&gt; Vec(Plus m n) a -&gt; (Vec m a, Vec n a)
+vchop SZ xs = (V0, xs)
+vchop (SS m) (x:&gt;xs) = (x:&gt;ys, zs) where
+  (ys,zs) = vchop m xs
+</code></pre>
 </div>
 </body>
 </html>
