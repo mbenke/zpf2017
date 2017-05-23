@@ -1,6 +1,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE DataKinds, KindSignatures #-}
-
+{-# LANGUAGE StandaloneDeriving #-}
 module Vec1 where
 
 data Nat :: * where
